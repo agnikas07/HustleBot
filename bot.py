@@ -73,7 +73,7 @@ activity_choices = [
     app_commands.Choice(name=key.capitalize(), value=key)
     for key in sorted(ACTIVITY_MAP.keys())
 ]
-activity_choices.append(app_commands.Choice(name="Sales", value="sales"))
+# activity_choices.append(app_commands.Choice(name="Sales", value="sales")) # This is handled with the ! command currently. This is not properly integrated into the slash command.
 activity_choices = sorted(activity_choices, key=lambda c: c.name)
 
 
