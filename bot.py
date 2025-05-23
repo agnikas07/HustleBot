@@ -104,7 +104,7 @@ def format_leaderboard(title, sorted_scores, start_date, end_date, unit_name_dis
         return embed
 
     embed = discord.Embed(title=title, color=discord.Color.gold())
-    description = f"{unit_name_display} from {start_date.strftime('%b %d')} - {end_date.strftime('%b %d')}\n\n"
+    description = f"{unit_name_display} from {start_date.strftime('%b %d')} - {end_date.strftime('%b %d')}\nSubmit your numbers here: {REMINDER_LINK}\n\n"
 
     rank = 1
     for i, (name, score) in enumerate(sorted_scores[:top_n]):
@@ -121,7 +121,7 @@ def format_leaderboard(title, sorted_scores, start_date, end_date, unit_name_dis
          description="No entries recorded for the top positions this week."
 
     embed.description = description
-    embed.set_footer(text=f"Leaderboard generated at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n Submit your numbers here: {REMINDER_LINK}")
+    embed.set_footer(text=f"Leaderboard generated at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     return embed
 
 async def fetch_and_format_activity_leaderboard(activity_key: str, worksheet, start_date, end_date):
