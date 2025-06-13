@@ -321,3 +321,5 @@ if __name__ == "__main__":
         bot.run(DISCORD_BOT_TOKEN)
     else:
         logger.error("Discord bot token is not configured. Set DISCORD_BOT_TOKEN in the .env file.")
+
+# This line is a test of the CI/CD pipeline.
