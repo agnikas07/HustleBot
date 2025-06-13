@@ -314,6 +314,7 @@ async def leaderboard_slash(interaction: Interaction, activity: app_commands.Cho
             ephemeral=True
         )
         logger.info(f"No nonzero leaderboard data for '{chosen_activity_value}' requested by user {interaction.user}.")
+        print("Test String")
 
 # --- Run the Bot ---
 if __name__ == "__main__":
