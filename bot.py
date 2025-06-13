@@ -99,15 +99,16 @@ def get_current_week_dates():
     return start_of_week, end_of_week
 
 def format_leaderboard(title, sorted_scores, start_date, end_date, unit_name_display, top_n=9):
-    if not sorted_scores:
-        embed = discord.Embed(title=title, description="No data found for this week.", color=discord.Color.orange())
-        return embed
+    # Filter out entries with a score of zero
+    filtered_scores = [(name, score) for name, score in sorted_scores if score > 0]
+    if not filtered_scores:
+        return None  # No data to post
 
     embed = discord.Embed(title=title, color=discord.Color.gold())
     description = f"{unit_name_display} from {start_date.strftime('%b %d')} - {end_date.strftime('%b %d')}\nSubmit your numbers here: {REMINDER_LINK}\n\n"
 
     rank = 1
-    for i, (name, score) in enumerate(sorted_scores[:top_n]):
+    for i, (name, score) in enumerate(filtered_scores[:top_n]):
         emoji = ""
         if rank == 1: emoji = "🥇" 
         elif rank == 2: emoji = "🥈"
@@ -116,9 +117,6 @@ def format_leaderboard(title, sorted_scores, start_date, end_date, unit_name_dis
 
         embed.add_field(name=f"{emoji}{name}", value=f"{unit_name_display} completed: **{score}**", inline=False)
         rank += 1
-
-    if not embed.fields:
-         description="No entries recorded for the top positions this week."
 
     embed.description = description
     embed.set_footer(text=f"Leaderboard generated at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -204,30 +202,34 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # --- Timezone Setup for Scheduled Tasks ---
 EST = pytz.timezone('America/New_York')
 
-# --- Automatic Leaderboard Posting Task ---
-@tasks.loop(hours=8)
-async def post_leaderboards_periodically():
-    await bot.wait_until_ready() 
-    channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
-    if channel:
-        logger.info(f"Starting periodic leaderboard posting to channel ID: {LEADERBOARD_CHANNEL_ID}")
-        start_date, end_date = get_current_week_dates()
+# --- Scheduled Leaderboard Posting Task (Fridays & Sundays at 2pm EST) ---
+scheduled_leaderboard_time_est = dt_time(14, 0, 0, tzinfo=EST)
 
-        activity_keys = list(ACTIVITY_MAP.keys())
-        for i, activity_key in enumerate(activity_keys):
-            try:
-                embed = await fetch_and_format_activity_leaderboard(activity_key, WORKSHEET, start_date, end_date)
-                await channel.send(embed=embed)
-                logger.info(f"Automatically posted {activity_key.capitalize()} leaderboard.")
-                
-                if i < len(activity_keys) - 1:
-                    logger.info("Next activity leaderboard will post in: 120 minutes")
-                    await asyncio.sleep(7200)
-            except Exception as e:
-                logger.error(f"Error automatically posting {activity_key.capitalize()} leaderboard: {e}", exc_info=True)
-                await channel.send(f"Sorry, there was an error generating the {activity_key.capitalize()} leaderboard automatically.")
+@tasks.loop(time=scheduled_leaderboard_time_est)
+async def post_leaderboards_on_schedule():
+    await bot.wait_until_ready()
+    today_est = datetime.now(EST).weekday()  # 0=Monday, ..., 4=Friday, 6=Sunday
+    if today_est in (4, 6):  # Friday or Sunday
+        channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
+        if channel:
+            logger.info(f"Posting all leaderboards to channel ID: {LEADERBOARD_CHANNEL_ID} (today is {'Friday' if today_est==4 else 'Sunday'})")
+            start_date, end_date = get_current_week_dates()
+            activity_keys = list(ACTIVITY_MAP.keys())
+            for activity_key in activity_keys:
+                try:
+                    embed = await fetch_and_format_activity_leaderboard(activity_key, WORKSHEET, start_date, end_date)
+                    if embed is not None:
+                        await channel.send(embed=embed)
+                        logger.info(f"Posted {activity_key.capitalize()} leaderboard.")
+                    else:
+                        logger.info(f"No nonzero data for {activity_key.capitalize()} leaderboard; nothing posted.")
+                except Exception as e:
+                    logger.error(f"Error posting {activity_key.capitalize()} leaderboard: {e}", exc_info=True)
+                    await channel.send(f"Sorry, there was an error generating the {activity_key.capitalize()} leaderboard.")
+        else:
+            logger.error(f"Could not find channel with ID {LEADERBOARD_CHANNEL_ID} for scheduled leaderboard posting.")
     else:
-        logger.error(f"Could not find channel with ID {LEADERBOARD_CHANNEL_ID} for automatic leaderboard posting.")
+        logger.info(f"Today is not Friday or Sunday in EST. No leaderboard posting. (Current weekday: {today_est})")
 
 # --- Sunday Reminder Task ---
 scheduled_time_est = dt_time(10, 30, 0, tzinfo=EST)
@@ -274,9 +276,9 @@ async def on_ready():
     print(f'Bot is ready and connected to Discord.')
     print(f'Use the command /leaderboard to get started.')
     print('------')
-    if not post_leaderboards_periodically.is_running():
-        post_leaderboards_periodically.start()
-        logger.info("Started automatic leaderboard posting task.")
+    if not post_leaderboards_on_schedule.is_running():
+        post_leaderboards_on_schedule.start()
+        logger.info(f"Started scheduled leaderboard posting task for Fridays and Sundays at {scheduled_leaderboard_time_est.strftime('%H:%M:%S %Z')}.")
     
     if not send_sunday_reminder.is_running():
         send_sunday_reminder.start()
@@ -303,9 +305,15 @@ async def leaderboard_slash(interaction: Interaction, activity: app_commands.Cho
     start_date_val, end_date_val = get_current_week_dates()
     embed = await fetch_and_format_activity_leaderboard(chosen_activity_value, WORKSHEET, start_date_val, end_date_val)
     
-    await interaction.followup.send(embed=embed)
-    logger.info(f"Successfully generated and sent leaderboard for '{ACTIVITY_MAP[chosen_activity_value]}' (displayed as '{chosen_activity_value.capitalize()}') via slash command for user {interaction.user}.")
-
+    if embed is not None:
+        await interaction.followup.send(embed=embed)
+        logger.info(f"Successfully generated and sent leaderboard for '{ACTIVITY_MAP[chosen_activity_value]}' (displayed as '{chosen_activity_value.capitalize()}') via slash command for user {interaction.user}.")
+    else:
+        await interaction.followup.send(
+            f"No leaderboard data to display for {chosen_activity_value.capitalize()} this week.",
+            ephemeral=True
+        )
+        logger.info(f"No nonzero leaderboard data for '{chosen_activity_value}' requested by user {interaction.user}.")
 
 # --- Run the Bot ---
 if __name__ == "__main__":
