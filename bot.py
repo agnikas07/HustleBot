@@ -93,13 +93,13 @@ activity_choices = sorted(activity_choices, key=lambda c: c.name)
 
 # --- Helper Functions ---
 def get_current_week_dates():
-    today = date.today()
-    start_of_week = today - timedelta(days=today.weekday()) 
-    end_of_week = start_of_week + timedelta(days=6)      
+    now_est = datetime.now(EST)
+    today_est = now_est.date()
+    start_of_week = today_est - timedelta(days=today_est.weekday())
+    end_of_week = start_of_week + timedelta(days=6)
     return start_of_week, end_of_week
 
 def format_leaderboard(title, sorted_scores, start_date, end_date, unit_name_display, top_n=9):
-    # Filter out entries with a score of zero
     filtered_scores = [(name, score) for name, score in sorted_scores if score > 0]
     if not filtered_scores:
         return None  # No data to post
@@ -208,8 +208,8 @@ scheduled_leaderboard_time_est = dt_time(14, 0, 0, tzinfo=EST)
 @tasks.loop(time=scheduled_leaderboard_time_est)
 async def post_leaderboards_on_schedule():
     await bot.wait_until_ready()
-    today_est = datetime.now(EST).weekday()  # 0=Monday, ..., 4=Friday, 6=Sunday
-    if today_est in (4, 6):  # Friday or Sunday
+    today_est = datetime.now(EST).weekday()
+    if today_est in (4, 6):
         channel = bot.get_channel(LEADERBOARD_CHANNEL_ID)
         if channel:
             logger.info(f"Posting all leaderboards to channel ID: {LEADERBOARD_CHANNEL_ID} (today is {'Friday' if today_est==4 else 'Sunday'})")
@@ -314,7 +314,6 @@ async def leaderboard_slash(interaction: Interaction, activity: app_commands.Cho
             ephemeral=True
         )
         logger.info(f"No nonzero leaderboard data for '{chosen_activity_value}' requested by user {interaction.user}.")
-        print("Test String")
 
 # --- Run the Bot ---
 if __name__ == "__main__":
@@ -322,5 +321,3 @@ if __name__ == "__main__":
         bot.run(DISCORD_BOT_TOKEN)
     else:
         logger.error("Discord bot token is not configured. Set DISCORD_BOT_TOKEN in the .env file.")
-
-# This line is a test of the CI/CD pipeline.
