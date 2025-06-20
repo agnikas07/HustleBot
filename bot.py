@@ -1,4 +1,3 @@
-import time
 import discord
 from discord.ext import commands, tasks
 from discord import app_commands
@@ -7,11 +6,10 @@ import gspread
 from google.oauth2.service_account import Credentials
 import os
 from dotenv import load_dotenv
-from datetime import datetime, timedelta, date, time as dt_time 
+from datetime import datetime, timedelta, time as dt_time 
 import logging
 from collections import defaultdict
 import pytz 
-import asyncio
 
 # --- Basic Logging Setup ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s:%(levelname)s:%(name)s: %(message)s')
@@ -112,10 +110,14 @@ def format_leaderboard(title, sorted_scores, start_date, end_date, unit_name_dis
     rank = 1
     for i, (name, score) in enumerate(filtered_scores[:top_n]):
         emoji = ""
-        if rank == 1: emoji = "🥇" 
-        elif rank == 2: emoji = "🥈"
-        elif rank == 3: emoji = "🥉"
-        else: emoji = f"{rank}."
+        if rank == 1: 
+            emoji = "🥇" 
+        elif rank == 2: 
+            emoji = "🥈"
+        elif rank == 3: 
+            emoji = "🥉"
+        else: 
+            emoji = f"{rank}."
 
         embed.add_field(name=f"{emoji}{name}", value=f"{unit_name_display} completed: **{score}**", inline=False)
         rank += 1
@@ -275,8 +277,8 @@ async def on_ready():
         logger.error(f"Failed to sync application commands: {e}")
         print(f"Failed to sync slash commands: {e}")
 
-    print(f'Bot is ready and connected to Discord.')
-    print(f'Use the command /leaderboard to get started.')
+    print('Bot is ready and connected to Discord.')
+    print('Use the command /leaderboard to get started.')
     print('------')
     if not post_leaderboards_on_schedule.is_running():
         post_leaderboards_on_schedule.start()
