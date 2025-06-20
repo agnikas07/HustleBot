@@ -126,7 +126,7 @@ def format_leaderboard(title, sorted_scores, start_date, end_date, unit_name_dis
 
 async def fetch_and_format_activity_leaderboard(activity_key: str, worksheet, start_date, end_date):
     target_column_name = ACTIVITY_MAP[activity_key]
-    unit_name_display = activity_key.capitalize()
+    unit_name_display = activity_key.replace("_", " ").title()
     logger.info(f"Generating leaderboard for '{target_column_name}' for week {start_date} to {end_date}")
 
     try:
