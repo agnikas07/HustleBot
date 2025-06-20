@@ -87,7 +87,7 @@ ACTIVITY_MAP = {
 
 # --- Create choices for the slash command argument ---
 activity_choices = [
-    app_commands.Choice(name=key.capitalize(), value=key)
+    app_commands.Choice(name=key.replace("_", " ").title(), value=key)
     for key in sorted(ACTIVITY_MAP.keys())
 ]
 activity_choices = sorted(activity_choices, key=lambda c: c.name) 
