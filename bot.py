@@ -119,7 +119,11 @@ def format_leaderboard(title, sorted_scores, start_date, end_date, unit_name_dis
         else: 
             emoji = f"{rank}."
 
-        embed.add_field(name=f"{emoji}{name}", value=f"{unit_name_display} completed: **{score}**", inline=False)
+        if unit_name_display == "Appointments":
+            embed.add_field(name=f"{emoji}{name}", value=f"{unit_name_display} booked: **{score}**", inline=False)
+        else:
+            embed.add_field(name=f"{emoji}{name}", value=f"{unit_name_display} completed: **{score}**", inline=False)
+            
         rank += 1
 
     embed.description = description
